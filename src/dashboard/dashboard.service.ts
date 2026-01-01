@@ -21,14 +21,14 @@ export class DashboardService {
     const [allExpenses, thisMonthExpenses, lastMonthExpenses] = await Promise.all([
       this.prisma.expense.findMany({
         where: { userId },
-        select: { amount: true, category: true, date: true },
+        select: { amount: true, category: true, date: true, paymentMethod: true },
       }),
       this.prisma.expense.findMany({
         where: {
           userId,
           date: { gte: startOfMonth },
         },
-        select: { amount: true, category: true, date: true },
+        select: { amount: true, category: true, date: true, paymentMethod: true },
       }),
       this.prisma.expense.findMany({
         where: {
@@ -50,10 +50,13 @@ export class DashboardService {
     const budgetLeft = (user?.monthlyBudget || 0) - thisMonthTotal;
     const budgetPercentage = user?.monthlyBudget ? (thisMonthTotal / user.monthlyBudget) * 100 : 0;
 
-    // Recent expenses
+    // Recent expenses (current month only)
     const recentExpenses = await this.prisma.expense.findMany({
-      where: { userId },
-      take: 10,
+      where: { 
+        userId,
+        date: { gte: startOfMonth }
+      },
+      take: 5,
       orderBy: { date: 'desc' },
       select: {
         id: true,
@@ -89,30 +92,53 @@ export class DashboardService {
     const monthlyTrends: Array<{ month: string; total: number }> = [];
     for (let i = 5; i >= 0; i--) {
       const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+      monthEnd.setMilliseconds(-1); // Set to last millisecond of the month
 
       const monthExpenses = allExpenses.filter((exp) => {
         const expDate = new Date(exp.date);
-        return expDate >= monthStart && expDate <= monthEnd;
+        return expDate >= monthStart && expDate < monthEnd;
       });
 
       const total = monthExpenses.reduce((sum, exp) => sum + exp.amount, 0);
 
       monthlyTrends.push({
-        month: monthStart.toISOString().substring(0, 7),
+        month: monthStart.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
         total: total || 0,
       });
     }
+
+    // Payment method breakdown
+    const paymentMethodMap = new Map<string, { total: number; count: number }>();
+    thisMonthExpenses.forEach((exp) => {
+      const method = exp.paymentMethod || 'Cash';
+      const current = paymentMethodMap.get(method) || { total: 0, count: 0 };
+      paymentMethodMap.set(method, {
+        total: current.total + exp.amount,
+        count: current.count + 1,
+      });
+    });
+
+    const paymentMethodBreakdown = Array.from(paymentMethodMap.entries())
+      .map(([method, data]) => ({
+        method,
+        total: data.total || 0,
+        count: data.count || 0,
+        percentage: thisMonthTotal > 0 ? ((data.total / thisMonthTotal) * 100) : 0,
+      }))
+      .sort((a, b) => b.total - a.total);
 
     return {
       success: true,
       data: {
         totalExpenses: totalBalance || 0,
         monthlySpending: thisMonthTotal || 0,
+        monthlyBudget: user?.monthlyBudget || 0,
         budgetRemaining: budgetLeft || 0,
         recentExpenses,
         categoryBreakdown,
         monthlyTrends,
+        paymentMethodBreakdown,
       },
     };
   }
