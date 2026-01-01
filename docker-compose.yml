@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database (for local development only)
+  # For production, use Neon: https://neon.tech
+  postgres:
+    image: postgres:15-alpine
+    container_name: expensewise-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: expensewise
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ExpenseWise Backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: expensewise-backend
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      # Use local postgres for development, or replace with Neon URL
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/expensewise?schema=public
+      JWT_SECRET: expensewise-super-secret-jwt-key-2026
+      JWT_REFRESH_SECRET: expensewise-super-secret-refresh-key-2026
+      NODE_ENV: development
+      PORT: 3000
+      FRONTEND_URL: http://localhost:5173
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: sh -c "npm run prisma:migrate && npm run prisma:seed && npm run start:dev"
+
+volumes:
+  postgres_data:

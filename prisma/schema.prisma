@@ -1,0 +1,155 @@
+// This is your Prisma schema file
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // Uncomment below for connection pooling with Neon
+  // directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum TransactionType {
+  EXPENSE
+  INCOME
+}
+
+model User {
+  id              String   @id @default(uuid())
+  name            String
+  email           String   @unique
+  password        String?
+  role            Role     @default(USER)
+  profilePicture  String?
+  
+  // OAuth fields
+  googleId        String?  @unique
+  githubId        String?  @unique
+  
+  // Settings
+  currency        String   @default("USD")
+  monthlyBudget   Float    @default(3000)
+  theme           String   @default("dark")
+  
+  // Notifications
+  emailNotifications  Boolean @default(true)
+  budgetAlerts        Boolean @default(true)
+  billReminders       Boolean @default(true)
+  weeklyReport        Boolean @default(false)
+  monthlyReport       Boolean @default(true)
+  
+  // Security
+  twoFactorEnabled    Boolean @default(false)
+  lastPasswordChange  DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  lastLogin       DateTime?
+  
+  expenses        Expense[]
+  creditCards     CreditCard[]
+  refreshTokens   RefreshToken[]
+  
+  @@index([email])
+}
+
+model RefreshToken {
+  id          String   @id @default(uuid())
+  token       String   @unique
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  
+  @@index([userId])
+  @@index([token])
+}
+
+model Expense {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  date          DateTime
+  description   String
+  category      String
+  amount        Float
+  paymentMethod String
+  notes         String?
+  receiptUrl    String?
+  
+  creditCardId  String?
+  creditCard    CreditCard? @relation(fields: [creditCardId], references: [id], onDelete: SetNull)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([date])
+  @@index([category])
+  @@index([creditCardId])
+}
+
+model CreditCard {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name            String
+  lastFourDigits  String
+  issuer          String
+  billingCycle    Int      // Day of month (1-31)
+  dueDate         Int      // Days after billing cycle (1-31)
+  creditLimit     Float
+  currentBalance  Float    @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  expenses        Expense[]
+  payments        Payment[]
+  
+  @@index([userId])
+}
+
+model Payment {
+  id            String     @id @default(uuid())
+  creditCardId  String
+  creditCard    CreditCard @relation(fields: [creditCardId], references: [id], onDelete: Cascade)
+  
+  amount        Float
+  date          DateTime
+  status        String     @default("completed")
+  billingPeriod String     // Format: YYYY-MM
+  
+  createdAt     DateTime   @default(now())
+  
+  @@index([creditCardId])
+  @@index([date])
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  color     String
+  icon      String
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PaymentMethod {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
