@@ -49,7 +49,7 @@ export class AnalyticsService {
     )[0];
 
     const mostUsedPaymentPercentage = expenses.length > 0
-      ? (paymentMethods.get(mostUsedPayment) / expenses.length) * 100
+      ? ((paymentMethods.get(mostUsedPayment) || 0) / expenses.length) * 100
       : 0;
 
     // Budget utilization
@@ -59,7 +59,7 @@ export class AnalyticsService {
     });
 
     const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-    const budgetUtilization = (totalExpenses / user.monthlyBudget) * 100;
+    const budgetUtilization = user ? (totalExpenses / user.monthlyBudget) * 100 : 0;
 
     // Category breakdown
     const categoryMap = new Map<string, { amount: number; count: number }>();
@@ -95,7 +95,7 @@ export class AnalyticsService {
       }));
 
     // Monthly trends
-    const monthlyTrends = this.calculateMonthlyTrends(expenses, user.monthlyBudget);
+    const monthlyTrends = this.calculateMonthlyTrends(expenses, user?.monthlyBudget || 0);
 
     return {
       success: true,
@@ -135,7 +135,7 @@ export class AnalyticsService {
       if (!categoryMap.has(exp.category)) {
         categoryMap.set(exp.category, []);
       }
-      categoryMap.get(exp.category).push(exp);
+      categoryMap.get(exp.category)?.push(exp);
     });
 
     const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
@@ -222,7 +222,7 @@ export class AnalyticsService {
       select: { monthlyBudget: true },
     });
 
-    const daily = this.groupByDay(expenses, user.monthlyBudget);
+    const daily = this.groupByDay(expenses, user?.monthlyBudget || 0);
 
     // Find recurring patterns
     const descriptionMap = new Map<string, Date[]>();
@@ -230,7 +230,7 @@ export class AnalyticsService {
       if (!descriptionMap.has(exp.description)) {
         descriptionMap.set(exp.description, []);
       }
-      descriptionMap.get(exp.description).push(new Date(exp.date));
+      descriptionMap.get(exp.description)?.push(new Date(exp.date));
     });
 
     const patterns = Array.from(descriptionMap.entries())
@@ -424,7 +424,7 @@ export class AnalyticsService {
 
   private calculateMonthlyTrends(expenses: any[], monthlyBudget: number) {
     const now = new Date();
-    const trends = [];
+    const trends: Array<{ month: string; expenses: number; income: number }> = [];
 
     for (let i = 5; i >= 0; i--) {
       const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);

@@ -47,8 +47,8 @@ export class DashboardService {
     const thisMonthChange =
       lastMonthTotal > 0 ? ((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 100 : 0;
     const averageDaily = thisMonthTotal / now.getDate();
-    const budgetLeft = user.monthlyBudget - thisMonthTotal;
-    const budgetPercentage = (thisMonthTotal / user.monthlyBudget) * 100;
+    const budgetLeft = (user?.monthlyBudget || 0) - thisMonthTotal;
+    const budgetPercentage = user?.monthlyBudget ? (thisMonthTotal / user.monthlyBudget) * 100 : 0;
 
     // Recent expenses
     const recentExpenses = await this.prisma.expense.findMany({
@@ -66,23 +66,27 @@ export class DashboardService {
     });
 
     // Category breakdown
-    const categoryMap = new Map<string, number>();
+    const categoryMap = new Map<string, { total: number; count: number }>();
     thisMonthExpenses.forEach((exp) => {
-      const current = categoryMap.get(exp.category) || 0;
-      categoryMap.set(exp.category, current + exp.amount);
+      const current = categoryMap.get(exp.category) || { total: 0, count: 0 };
+      categoryMap.set(exp.category, {
+        total: current.total + exp.amount,
+        count: current.count + 1,
+      });
     });
 
     const categoryBreakdown = Array.from(categoryMap.entries())
-      .map(([category, amount]) => ({
+      .map(([category, data]) => ({
         category,
-        amount,
-        percentage: (amount / thisMonthTotal) * 100,
+        total: data.total || 0,
+        count: data.count || 0,
+        percentage: thisMonthTotal > 0 ? ((data.total / thisMonthTotal) * 100) : 0,
         color: this.getCategoryColor(category),
       }))
-      .sort((a, b) => b.amount - a.amount);
+      .sort((a, b) => b.total - a.total);
 
     // Monthly trends (last 6 months)
-    const monthlyTrends = [];
+    const monthlyTrends: Array<{ month: string; total: number }> = [];
     for (let i = 5; i >= 0; i--) {
       const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
@@ -96,25 +100,16 @@ export class DashboardService {
 
       monthlyTrends.push({
         month: monthStart.toISOString().substring(0, 7),
-        expenses: total,
-        income: user.monthlyBudget,
+        total: total || 0,
       });
     }
 
     return {
       success: true,
       data: {
-        stats: {
-          totalBalance,
-          totalBalanceChange: 12.5, // Mock value - would need historical data
-          totalBalanceChangeType: 'increase',
-          thisMonthExpenses: thisMonthTotal,
-          thisMonthChange: Math.abs(thisMonthChange),
-          thisMonthChangeType: thisMonthChange >= 0 ? 'increase' : 'decrease',
-          averageDaily,
-          budgetLeft,
-          budgetPercentage,
-        },
+        totalExpenses: totalBalance || 0,
+        monthlySpending: thisMonthTotal || 0,
+        budgetRemaining: budgetLeft || 0,
         recentExpenses,
         categoryBreakdown,
         monthlyTrends,

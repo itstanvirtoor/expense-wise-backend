@@ -61,7 +61,7 @@ export class AuthService {
       message: 'Account created successfully',
       data: {
         user,
-        token: accessToken,
+        accessToken: accessToken,
         refreshToken,
       },
     };
@@ -114,7 +114,7 @@ export class AuthService {
             },
           },
         },
-        token: accessToken,
+        accessToken: accessToken,
         refreshToken,
       },
     };
@@ -180,8 +180,54 @@ export class AuthService {
     return {
       success: true,
       data: {
-        token: accessToken,
+        accessToken: accessToken,
         refreshToken: newRefreshToken,
+      },
+    };
+  }
+
+  async getUserById(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        profilePicture: true,
+        currency: true,
+        monthlyBudget: true,
+        emailNotifications: true,
+        budgetAlerts: true,
+        billReminders: true,
+        createdAt: true,
+        lastLogin: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return {
+      success: true,
+      data: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        profilePicture: user.profilePicture,
+        settings: {
+          currency: user.currency,
+          monthlyBudget: user.monthlyBudget,
+          notifications: {
+            email: user.emailNotifications,
+            budgetAlerts: user.budgetAlerts,
+            billReminders: user.billReminders,
+          },
+        },
+        createdAt: user.createdAt,
+        lastLogin: user.lastLogin,
       },
     };
   }
@@ -199,7 +245,12 @@ export class AuthService {
       expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
     });
 
-    // Store refresh token
+    // Delete all existing refresh tokens for this user to prevent accumulation
+    await this.prisma.refreshToken.deleteMany({
+      where: { userId },
+    });
+
+    // Store new refresh token
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
 

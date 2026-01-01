@@ -14,7 +14,7 @@ import { Role } from '@prisma/client';
 export class DashboardController {
   constructor(private dashboardService: DashboardService) {}
 
-  @Get('user')
+  @Get()
   @ApiOperation({ summary: 'Get user dashboard data' })
   @ApiResponse({ status: 200, description: 'Dashboard data retrieved successfully' })
   async getUserDashboard(@CurrentUser() user: any) {
