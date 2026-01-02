@@ -51,4 +51,67 @@ export class SettingsService {
       },
     };
   }
+
+  async getBudgetForMonth(userId: string, month: string) {
+    // Try to get monthly budget from MonthlyBudget table
+    const monthlyBudget = await this.prisma.monthlyBudget.findUnique({
+      where: {
+        userId_month: {
+          userId,
+          month,
+        },
+      },
+    });
+
+    if (monthlyBudget) {
+      return {
+        success: true,
+        data: {
+          month,
+          budget: monthlyBudget.budget,
+          isCustom: true,
+        },
+      };
+    }
+
+    // Fallback to user's default monthly budget
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { monthlyBudget: true },
+    });
+
+    return {
+      success: true,
+      data: {
+        month,
+        budget: user?.monthlyBudget || 3000,
+        isCustom: false,
+      },
+    };
+  }
+
+  async setBudgetForMonth(userId: string, month: string, budget: number) {
+    const monthlyBudget = await this.prisma.monthlyBudget.upsert({
+      where: {
+        userId_month: {
+          userId,
+          month,
+        },
+      },
+      update: {
+        budget,
+      },
+      create: {
+        userId,
+        month,
+        budget,
+      },
+    });
+
+    return {
+      success: true,
+      data: monthlyBudget,
+      message: `Budget for ${month} set to ${budget}`,
+    };
+  }
 }

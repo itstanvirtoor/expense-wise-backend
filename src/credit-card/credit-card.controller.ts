@@ -65,4 +65,11 @@ export class CreditCardController {
   ) {
     return this.creditCardService.linkExpenseToCard(user.sub, id, linkExpenseDto);
   }
+
+  @Post(':id/clear-outstanding')
+  @ApiOperation({ summary: 'Clear previous outstanding balance' })
+  @ApiResponse({ status: 200, description: 'Outstanding cleared successfully' })
+  async clearOutstanding(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.creditCardService.clearOutstanding(user.sub, id);
+  }
 }

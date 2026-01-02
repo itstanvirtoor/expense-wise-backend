@@ -52,14 +52,11 @@ export class AnalyticsService {
       ? ((paymentMethods.get(mostUsedPayment) || 0) / expenses.length) * 100
       : 0;
 
-    // Budget utilization
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { monthlyBudget: true },
-    });
+    // Budget utilization - get budgets for all months in range
+    const totalBudget = await this.getTotalBudgetForRange(userId, startDate, endDate);
 
     const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-    const budgetUtilization = user ? (totalExpenses / user.monthlyBudget) * 100 : 0;
+    const budgetUtilization = totalBudget > 0 ? (totalExpenses / totalBudget) * 100 : 0;
 
     // Category breakdown
     const categoryMap = new Map<string, { amount: number; count: number }>();
@@ -92,10 +89,11 @@ export class AnalyticsService {
         amount: exp.amount,
         date: exp.date.toISOString().split('T')[0],
         category: exp.category,
+        paymentMethod: exp.paymentMethod,
       }));
 
-    // Monthly trends
-    const monthlyTrends = this.calculateMonthlyTrends(expenses, user?.monthlyBudget || 0);
+    // Monthly trends - use the same filtered expenses and time range
+    const monthlyTrends = await this.calculateMonthlyTrends(expenses, userId, startDate, endDate);
 
     return {
       success: true,
@@ -422,29 +420,92 @@ export class AnalyticsService {
     return labels[period] || period;
   }
 
-  private calculateMonthlyTrends(expenses: any[], monthlyBudget: number) {
-    const now = new Date();
+  private async calculateMonthlyTrends(expenses: any[], userId: string, startDate: Date, endDate: Date) {
     const trends: Array<{ month: string; expenses: number; income: number }> = [];
 
-    for (let i = 5; i >= 0; i--) {
-      const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
-
-      const monthExpenses = expenses.filter((exp) => {
-        const expDate = new Date(exp.date);
-        return expDate >= monthStart && expDate <= monthEnd;
-      });
-
-      const total = monthExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-
+    // Get all unique months in the date range
+    const startMonth = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    const endMonth = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+    
+    const monthsMap = new Map<string, number>();
+    
+    // Group expenses by month
+    expenses.forEach((exp) => {
+      const expDate = new Date(exp.date);
+      const year = expDate.getFullYear();
+      const month = String(expDate.getMonth() + 1).padStart(2, '0');
+      const monthKey = `${year}-${month}`;
+      
+      monthsMap.set(monthKey, (monthsMap.get(monthKey) || 0) + exp.amount);
+    });
+    
+    // Generate trends for all months in range
+    let currentMonth = new Date(startMonth);
+    while (currentMonth <= endMonth) {
+      const year = currentMonth.getFullYear();
+      const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
+      const monthKey = `${year}-${month}`;
+      
+      // Get budget for this specific month
+      const monthBudget = await this.getBudgetForMonth(userId, monthKey);
+      
       trends.push({
-        month: monthStart.toISOString().substring(0, 7),
-        expenses: total,
-        income: monthlyBudget,
+        month: monthKey,
+        expenses: monthsMap.get(monthKey) || 0,
+        income: monthBudget,
       });
+      
+      // Move to next month
+      currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1);
     }
 
     return trends;
+  }
+
+  private async getBudgetForMonth(userId: string, month: string): Promise<number> {
+    // Try to get monthly budget from MonthlyBudget table
+    const monthlyBudget = await this.prisma.monthlyBudget.findUnique({
+      where: {
+        userId_month: {
+          userId,
+          month,
+        },
+      },
+    });
+
+    if (monthlyBudget) {
+      return monthlyBudget.budget;
+    }
+
+    // Fallback to user's default monthly budget
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { monthlyBudget: true },
+    });
+
+    return user?.monthlyBudget || 3000;
+  }
+
+  private async getTotalBudgetForRange(userId: string, startDate: Date, endDate: Date): Promise<number> {
+    const startMonth = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    const endMonth = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+    
+    let totalBudget = 0;
+    let currentMonth = new Date(startMonth);
+    
+    while (currentMonth <= endMonth) {
+      const year = currentMonth.getFullYear();
+      const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
+      const monthKey = `${year}-${month}`;
+      
+      const budget = await this.getBudgetForMonth(userId, monthKey);
+      totalBudget += budget;
+      
+      // Move to next month
+      currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1);
+    }
+
+    return totalBudget;
   }
 
   private groupByDay(expenses: any[], monthlyBudget: number) {

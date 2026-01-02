@@ -218,6 +218,57 @@ export class CreditCardService {
     };
   }
 
+  async clearOutstanding(userId: string, cardId: string) {
+    const card = await this.prisma.creditCard.findFirst({
+      where: { id: cardId, userId },
+    });
+
+    if (!card) {
+      throw new NotFoundException('Credit card not found');
+    }
+
+    const previousOutstanding = card.previousOutstanding;
+
+    if (previousOutstanding <= 0) {
+      return {
+        success: false,
+        message: 'No outstanding balance to clear',
+      };
+    }
+
+    // Create expense entry for tracking
+    const expense = await this.prisma.expense.create({
+      data: {
+        userId,
+        date: new Date(),
+        description: `Credit card payment - Previous outstanding: ${previousOutstanding.toFixed(2)}`,
+        category: 'Credit Card Repayment',
+        amount: 0, // Notebook entry
+        paymentMethod: 'Net Banking',
+        notes: `Cleared previous outstanding for ${card.name} (**** ${card.lastFourDigits})`,
+      },
+    });
+
+    // Clear previous outstanding completely
+    const updatedCard = await this.prisma.creditCard.update({
+      where: { id: cardId },
+      data: {
+        previousOutstanding: 0,
+      },
+    });
+
+    return {
+      success: true,
+      message: `Cleared previous outstanding of ${previousOutstanding.toFixed(2)}`,
+      data: {
+        clearedAmount: previousOutstanding,
+        newPreviousOutstanding: 0,
+        currentBalance: updatedCard.currentBalance,
+        expenseId: expense.id,
+      },
+    };
+  }
+
   private calculateDates(billingCycle: number, dueDate: number) {
     const now = new Date();
     const currentDay = now.getDate();

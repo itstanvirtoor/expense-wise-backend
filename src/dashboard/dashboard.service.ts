@@ -57,7 +57,10 @@ export class DashboardService {
         date: { gte: startOfMonth }
       },
       take: 5,
-      orderBy: { date: 'desc' },
+      orderBy: [
+        { date: 'desc' },
+        { createdAt: 'desc' },
+      ],
       select: {
         id: true,
         description: true,

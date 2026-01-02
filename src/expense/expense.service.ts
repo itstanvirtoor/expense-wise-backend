@@ -35,7 +35,10 @@ export class ExpenseService {
         where,
         skip,
         take: limit,
-        orderBy: { [sortBy]: sortOrder },
+        orderBy: [
+          { date: 'desc' },
+          { createdAt: 'desc' },
+        ],
         include: {
           creditCard: {
             select: {

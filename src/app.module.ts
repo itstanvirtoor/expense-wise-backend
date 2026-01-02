@@ -9,6 +9,8 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { CreditCardModule } from './credit-card/credit-card.module';
 import { SettingsModule } from './settings/settings.module';
 import { CategoryModule } from './category/category.module';
+import { LoanModule } from './loan/loan.module';
+import { SIPModule } from './sip/sip.module';
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { CategoryModule } from './category/category.module';
     CreditCardModule,
     SettingsModule,
     CategoryModule,
+    LoanModule,
+    SIPModule,
   ],
 })
 export class AppModule {}

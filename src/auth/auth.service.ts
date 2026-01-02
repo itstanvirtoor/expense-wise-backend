@@ -91,8 +91,11 @@ export class AuthService {
       data: { lastLogin: new Date() },
     });
 
+    // Process pending EMIs and SIPs
+    await this.processPendingRecurring(user.id);
+
     // Generate tokens
-    const { accessToken, refreshToken } = await this.generateTokens(user.id, user.email, user.role);
+    const { accessToken, refreshToken} = await this.generateTokens(user.id, user.email, user.role);
 
     return {
       success: true,
@@ -252,5 +255,91 @@ export class AuthService {
     });
 
     return { accessToken, refreshToken };
+  }
+
+  private async processPendingRecurring(userId: string) {
+    const today = new Date();
+    const currentDay = today.getDate();
+    const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+
+    // Process EMIs
+    const activeLoans = await this.prisma.loan.findMany({
+      where: {
+        userId,
+        status: 'active',
+        emiDate: currentDay,
+        endDate: { gte: today },
+      },
+    });
+
+    for (const loan of activeLoans) {
+      const existingExpense = await this.prisma.expense.findFirst({
+        where: {
+          userId,
+          description: { contains: `EMI - ${loan.name}` },
+          date: {
+            gte: new Date(today.getFullYear(), today.getMonth(), 1),
+            lt: new Date(today.getFullYear(), today.getMonth() + 1, 1),
+          },
+        },
+      });
+
+      if (!existingExpense) {
+        await this.prisma.expense.create({
+          data: {
+            userId,
+            date: new Date(today.getFullYear(), today.getMonth(), loan.emiDate),
+            description: `EMI - ${loan.name}`,
+            category: 'Loan EMI',
+            amount: loan.emiAmount,
+            paymentMethod: loan.paymentMethod,
+            creditCardId: loan.creditCardId,
+            notes: `Auto-generated EMI payment for ${currentMonth}`,
+          },
+        });
+      }
+    }
+
+    // Process SIPs
+    const activeSIPs = await this.prisma.sIP.findMany({
+      where: {
+        userId,
+        status: 'active',
+        sipDate: currentDay,
+        startDate: { lte: today },
+        OR: [
+          { endDate: null },
+          { endDate: { gte: today } },
+        ],
+      },
+    });
+
+    for (const sip of activeSIPs) {
+      const existingExpense = await this.prisma.expense.findFirst({
+        where: {
+          userId,
+          description: { contains: `SIP - ${sip.name}` },
+          date: {
+            gte: new Date(today.getFullYear(), today.getMonth(), 1),
+            lt: new Date(today.getFullYear(), today.getMonth() + 1, 1),
+          },
+        },
+      });
+
+      if (!existingExpense) {
+        await this.prisma.expense.create({
+          data: {
+            userId,
+            date: new Date(today.getFullYear(), today.getMonth(), sip.sipDate),
+            description: `SIP - ${sip.name} (${sip.fundName})`,
+            category: 'Investment',
+            amount: sip.sipAmount,
+            paymentMethod: sip.paymentMethod,
+            creditCardId: sip.creditCardId,
+            notes: `Auto-generated SIP payment for ${currentMonth}`,
+          },
+        });
+      }
+    }
   }
 }

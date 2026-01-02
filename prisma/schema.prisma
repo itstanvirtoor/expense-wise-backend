@@ -59,6 +59,9 @@ model User {
   expenses        Expense[]
   creditCards     CreditCard[]
   refreshTokens   RefreshToken[]
+  monthlyBudgets  MonthlyBudget[]
+  loans           Loan[]
+  sips            SIP[]
   
   @@index([email])
 }
@@ -101,23 +104,24 @@ model Expense {
 }
 
 model CreditCard {
-  id              String   @id @default(uuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                  String   @id @default(uuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  name            String
-  lastFourDigits  String
-  issuer          String
-  billingCycle    Int      // Day of month (1-31)
-  dueDate         Int      // Days after billing cycle (1-31)
-  creditLimit     Float
-  currentBalance  Float    @default(0)
+  name                String
+  lastFourDigits      String
+  issuer              String
+  billingCycle        Int      // Day of month (1-31)
+  dueDate             Int      // Days after billing cycle (1-31)
+  creditLimit         Float
+  currentBalance      Float    @default(0)
+  previousOutstanding Float    @default(0)
   
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
   
-  expenses        Expense[]
-  payments        Payment[]
+  expenses            Expense[]
+  payments            Payment[]
   
   @@index([userId])
 }
@@ -154,4 +158,67 @@ model PaymentMethod {
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model MonthlyBudget {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  month     String   // Format: YYYY-MM
+  budget    Float
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([userId, month])
+  @@index([userId])
+  @@index([month])
+}
+
+model Loan {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name            String
+  loanAmount      Float
+  interestRate    Float
+  emiAmount       Float
+  emiDate         Int      // Day of month (1-31)
+  startDate       DateTime
+  endDate         DateTime
+  paymentMethod   String
+  creditCardId    String?
+  status          String   @default("active") // active, completed, closed
+  notes           String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([status])
+}
+
+model SIP {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name            String
+  fundName        String
+  sipAmount       Float
+  sipDate         Int      // Day of month (1-31)
+  startDate       DateTime
+  endDate         DateTime?
+  paymentMethod   String
+  creditCardId    String?
+  status          String   @default("active") // active, paused, completed
+  notes           String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([status])
 }
