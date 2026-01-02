@@ -8,25 +8,25 @@ async function main() {
 
   // Seed Categories
   const categories = [
-    { name: 'Food & Dining', color: '#6366F1', icon: 'utensils' },
-    { name: 'Transportation', color: '#3B82F6', icon: 'car' },
-    { name: 'Entertainment', color: '#8B5CF6', icon: 'film' },
-    { name: 'Utilities', color: '#EC4899', icon: 'zap' },
-    { name: 'Shopping', color: '#F59E0B', icon: 'shopping-bag' },
-    { name: 'Healthcare', color: '#10B981', icon: 'heart' },
-    { name: 'Education', color: '#14B8A6', icon: 'book' },
-    { name: 'Travel', color: '#EF4444', icon: 'plane' },
-    { name: 'Subscription', color: '#8B5CF6', icon: 'repeat' },
-    { name: 'Credit Card Repayment', color: '#64748B', icon: 'credit-card' },
-    { name: 'Loan EMI', color: '#F97316', icon: 'trending-up' },
-    { name: 'Investment', color: '#22C55E', icon: 'line-chart' },
-    { name: 'Others', color: '#6B7280', icon: 'more-horizontal' },
+    { name: 'Food & Dining', color: '#6366F1', icon: 'Utensils' },
+    { name: 'Transportation', color: '#3B82F6', icon: 'Car' },
+    { name: 'Entertainment', color: '#8B5CF6', icon: 'Film' },
+    { name: 'Utilities', color: '#EC4899', icon: 'Zap' },
+    { name: 'Shopping', color: '#F59E0B', icon: 'ShoppingBag' },
+    { name: 'Healthcare', color: '#10B981', icon: 'Heart' },
+    { name: 'Education', color: '#14B8A6', icon: 'Book' },
+    { name: 'Travel', color: '#EF4444', icon: 'Plane' },
+    { name: 'Subscription', color: '#8B5CF6', icon: 'Repeat' },
+    { name: 'Credit Card Repayment', color: '#64748B', icon: 'CreditCard' },
+    { name: 'Loan EMI', color: '#F97316', icon: 'TrendingUp' },
+    { name: 'Investment', color: '#22C55E', icon: 'LineChart' },
+    { name: 'Others', color: '#6B7280', icon: 'MoreHorizontal' },
   ];
 
   for (const category of categories) {
     await prisma.category.upsert({
       where: { name: category.name },
-      update: {},
+      update: { color: category.color, icon: category.icon },
       create: category,
     });
   }

@@ -11,6 +11,7 @@ import { SettingsModule } from './settings/settings.module';
 import { CategoryModule } from './category/category.module';
 import { LoanModule } from './loan/loan.module';
 import { SIPModule } from './sip/sip.module';
+import { BudgetModule } from './budget/budget.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { SIPModule } from './sip/sip.module';
     CategoryModule,
     LoanModule,
     SIPModule,
+    BudgetModule,
   ],
 })
 export class AppModule {}

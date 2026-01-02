@@ -12,7 +12,6 @@ export class SettingsService {
         name: true,
         email: true,
         currency: true,
-        monthlyBudget: true,
         emailNotifications: true,
         budgetAlerts: true,
         billReminders: true,
@@ -31,7 +30,6 @@ export class SettingsService {
           name: user?.name || '',
           email: user?.email || '',
           currency: user?.currency || 'USD',
-          monthlyBudget: user?.monthlyBudget || 0,
         },
         notifications: {
           emailNotifications: user?.emailNotifications || false,
@@ -74,17 +72,12 @@ export class SettingsService {
       };
     }
 
-    // Fallback to user's default monthly budget
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { monthlyBudget: true },
-    });
-
+    // No budget set for this month
     return {
       success: true,
       data: {
         month,
-        budget: user?.monthlyBudget || 3000,
+        budget: 0,
         isCustom: false,
       },
     };

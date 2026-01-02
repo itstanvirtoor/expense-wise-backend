@@ -11,11 +11,14 @@ export class DashboardService {
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
-    // Get user settings
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { monthlyBudget: true },
+    // Get current month's budget
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const monthlyBudget = await this.prisma.monthlyBudget.findUnique({
+      where: {
+        userId_month: { userId, month: currentMonth },
+      },
     });
+    const monthBudget = monthlyBudget?.budget || 0;
 
     // Get all expenses for calculations
     const [allExpenses, thisMonthExpenses, lastMonthExpenses] = await Promise.all([
@@ -47,8 +50,8 @@ export class DashboardService {
     const thisMonthChange =
       lastMonthTotal > 0 ? ((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 100 : 0;
     const averageDaily = thisMonthTotal / now.getDate();
-    const budgetLeft = (user?.monthlyBudget || 0) - thisMonthTotal;
-    const budgetPercentage = user?.monthlyBudget ? (thisMonthTotal / user.monthlyBudget) * 100 : 0;
+    const budgetLeft = monthBudget - thisMonthTotal;
+    const budgetPercentage = monthBudget > 0 ? (thisMonthTotal / monthBudget) * 100 : 0;
 
     // Recent expenses (current month only)
     const recentExpenses = await this.prisma.expense.findMany({
@@ -136,7 +139,7 @@ export class DashboardService {
       data: {
         totalExpenses: totalBalance || 0,
         monthlySpending: thisMonthTotal || 0,
-        monthlyBudget: user?.monthlyBudget || 0,
+        monthlyBudget: monthBudget,
         budgetRemaining: budgetLeft || 0,
         recentExpenses,
         categoryBreakdown,

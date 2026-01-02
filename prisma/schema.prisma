@@ -36,7 +36,6 @@ model User {
   
   // Settings
   currency        String   @default("USD")
-  monthlyBudget   Float    @default(3000)
   theme           String   @default("dark")
   location        String   @default("United States")
   timezone        String   @default("America/New_York")

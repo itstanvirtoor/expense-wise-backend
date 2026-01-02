@@ -109,7 +109,6 @@ export class AuthService {
           profilePicture: user.profilePicture,
           settings: {
             currency: user.currency,
-            monthlyBudget: user.monthlyBudget,
             notifications: {
               email: user.emailNotifications,
               budgetAlerts: user.budgetAlerts,
@@ -199,7 +198,6 @@ export class AuthService {
         role: true,
         profilePicture: true,
         currency: true,
-        monthlyBudget: true,
         theme: true,
         location: true,
         timezone: true,

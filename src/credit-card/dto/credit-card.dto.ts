@@ -33,6 +33,10 @@ export class CreateCreditCardDto {
   @ApiPropertyOptional({ example: 2350 })
   @IsNumber()
   currentBalance?: number;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsNumber()
+  previousOutstanding?: number;
 }
 
 export class UpdateCreditCardDto {
@@ -59,6 +63,10 @@ export class UpdateCreditCardDto {
   @Min(1)
   @Max(31)
   dueDate?: number;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsNumber()
+  previousOutstanding?: number;
 }
 
 export class LinkExpenseDto {

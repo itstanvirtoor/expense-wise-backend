@@ -58,6 +58,13 @@ export class AnalyticsService {
     const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
     const budgetUtilization = totalBudget > 0 ? (totalExpenses / totalBudget) * 100 : 0;
 
+    // Fetch all categories to get their colors and icons
+    const categories = await this.prisma.category.findMany({
+      select: { name: true, color: true, icon: true },
+    });
+    const categoryColorMap = new Map(categories.map(cat => [cat.name, cat.color]));
+    const categoryIconMap = new Map(categories.map(cat => [cat.name, cat.icon]));
+
     // Category breakdown
     const categoryMap = new Map<string, { amount: number; count: number }>();
     expenses.forEach((exp) => {
@@ -75,7 +82,8 @@ export class AnalyticsService {
         percentage: (data.amount / totalExpenses) * 100,
         trend: 'up', // Mock - would need historical comparison
         trendValue: 12.5,
-        color: this.getCategoryColor(category),
+        color: categoryColorMap.get(category) || '#6B7280',
+        icon: categoryIconMap.get(category) || 'Wallet',
       }))
       .sort((a, b) => b.amount - a.amount);
 
@@ -215,12 +223,7 @@ export class AnalyticsService {
       orderBy: { date: 'asc' },
     });
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { monthlyBudget: true },
-    });
-
-    const daily = this.groupByDay(expenses, user?.monthlyBudget || 0);
+    const daily = this.groupByDay(expenses, 0);
 
     // Find recurring patterns
     const descriptionMap = new Map<string, Date[]>();
@@ -477,13 +480,8 @@ export class AnalyticsService {
       return monthlyBudget.budget;
     }
 
-    // Fallback to user's default monthly budget
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { monthlyBudget: true },
-    });
-
-    return user?.monthlyBudget || 3000;
+    // No budget set for this month
+    return 0;
   }
 
   private async getTotalBudgetForRange(userId: string, startDate: Date, endDate: Date): Promise<number> {
