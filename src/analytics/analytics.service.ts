@@ -5,17 +5,27 @@ import { PrismaService } from '../prisma/prisma.service';
 export class AnalyticsService {
   constructor(private prisma: PrismaService) {}
 
-  async getOverview(userId: string, timeRange: string = '30days') {
+  async getOverview(userId: string, timeRange: string = '30days', category?: string, paymentMethod?: string) {
     const { startDate, endDate } = this.getDateRange(timeRange);
 
-    const expenses = await this.prisma.expense.findMany({
-      where: {
-        userId,
-        date: {
-          gte: startDate,
-          lte: endDate,
-        },
+    const whereClause: any = {
+      userId,
+      date: {
+        gte: startDate,
+        lte: endDate,
       },
+    };
+
+    if (category && category !== 'all') {
+      whereClause.category = category;
+    }
+
+    if (paymentMethod && paymentMethod !== 'all') {
+      whereClause.paymentMethod = paymentMethod;
+    }
+
+    const expenses = await this.prisma.expense.findMany({
+      where: whereClause,
       orderBy: { date: 'desc' },
     });
 

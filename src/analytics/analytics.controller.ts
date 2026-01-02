@@ -14,9 +14,16 @@ export class AnalyticsController {
   @Get('overview')
   @ApiOperation({ summary: 'Get analytics overview' })
   @ApiQuery({ name: 'timeRange', required: false, type: String })
+  @ApiQuery({ name: 'category', required: false, type: String })
+  @ApiQuery({ name: 'paymentMethod', required: false, type: String })
   @ApiResponse({ status: 200, description: 'Analytics overview retrieved successfully' })
-  async getOverview(@CurrentUser() user: any, @Query('timeRange') timeRange?: string) {
-    return this.analyticsService.getOverview(user.sub, timeRange);
+  async getOverview(
+    @CurrentUser() user: any,
+    @Query('timeRange') timeRange?: string,
+    @Query('category') category?: string,
+    @Query('paymentMethod') paymentMethod?: string,
+  ) {
+    return this.analyticsService.getOverview(user.sub, timeRange, category, paymentMethod);
   }
 
   @Get('categories')
