@@ -21,6 +21,16 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   profilePicture?: string;
+
+  @ApiPropertyOptional({ example: 'India' })
+  @IsOptional()
+  @IsString()
+  location?: string;
+
+  @ApiPropertyOptional({ example: 'Asia/Kolkata' })
+  @IsOptional()
+  @IsString()
+  timezone?: string;
 }
 
 export class UpdatePasswordDto {

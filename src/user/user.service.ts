@@ -19,6 +19,8 @@ export class UserService {
         currency: true,
         monthlyBudget: true,
         theme: true,
+        location: true,
+        timezone: true,
         emailNotifications: true,
         budgetAlerts: true,
         billReminders: true,
@@ -37,21 +39,7 @@ export class UserService {
 
     return {
       success: true,
-      data: {
-        ...user,
-        settings: {
-          currency: user.currency,
-          monthlyBudget: user.monthlyBudget,
-          theme: user.theme,
-          notifications: {
-            emailNotifications: user.emailNotifications,
-            budgetAlerts: user.budgetAlerts,
-            billReminders: user.billReminders,
-            weeklyReport: user.weeklyReport,
-            monthlyReport: user.monthlyReport,
-          },
-        },
-      },
+      data: user,
     };
   }
 
@@ -66,19 +54,15 @@ export class UserService {
         profilePicture: true,
         currency: true,
         monthlyBudget: true,
+        location: true,
+        timezone: true,
       },
     });
 
     return {
       success: true,
       message: 'Profile updated successfully',
-      data: {
-        ...user,
-        settings: {
-          currency: user.currency,
-          monthlyBudget: user.monthlyBudget,
-        },
-      },
+      data: user,
     };
   }
 

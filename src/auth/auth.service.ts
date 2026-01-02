@@ -197,9 +197,15 @@ export class AuthService {
         profilePicture: true,
         currency: true,
         monthlyBudget: true,
+        theme: true,
+        location: true,
+        timezone: true,
         emailNotifications: true,
         budgetAlerts: true,
         billReminders: true,
+        weeklyReport: true,
+        monthlyReport: true,
+        twoFactorEnabled: true,
         createdAt: true,
         lastLogin: true,
       },
@@ -211,24 +217,7 @@ export class AuthService {
 
     return {
       success: true,
-      data: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        profilePicture: user.profilePicture,
-        settings: {
-          currency: user.currency,
-          monthlyBudget: user.monthlyBudget,
-          notifications: {
-            email: user.emailNotifications,
-            budgetAlerts: user.budgetAlerts,
-            billReminders: user.billReminders,
-          },
-        },
-        createdAt: user.createdAt,
-        lastLogin: user.lastLogin,
-      },
+      data: user,
     };
   }
 
